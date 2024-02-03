@@ -562,15 +562,15 @@ struct mjModel_ {
   // ------------------------------- sizes
 
   // sizes needed at mjModel construction
-  int nq;                         // number of generalized coordinates = dim(qpos)
-  int nv;                         // number of degrees of freedom = dim(qvel)
-  int nu;                         // number of actuators/controls = dim(ctrl)
-  int na;                         // number of activation states = dim(act)
-  int nbody;                      // number of bodies
-  int nbvh;                       // number of total bounding volumes in all bodies
-  int nbvhstatic;                 // number of static bounding volumes (aabb stored in mjModel)
-  int nbvhdynamic;                // number of dynamic bounding volumes (aabb stored in mjData)
-  int njnt;                       // number of joints
+  int nq;                         // 广义坐标维度(位置变量的数量) number of generalized coordinates = dim(qpos)
+  int nv;                         // 自由度(速度变量的数量)       number of degrees of freedom = dim(qvel)
+  int nu;                         // 控制器的数量                 number of actuators/controls = dim(ctrl)
+  int na;                         //                              number of activation states = dim(act)
+  int nbody;                      // 刚体的数量                   number of bodies
+  int nbvh;                       //                              number of total bounding volumes in all bodies
+  int nbvhstatic;                 //                              number of static bounding volumes (aabb stored in mjModel)
+  int nbvhdynamic;                //                              number of dynamic bounding volumes (aabb stored in mjData)
+  int njnt;                       // 关节的数量                   number of joints
   int ngeom;                      // number of geoms
   int nsite;                      // number of sites
   int ncam;                       // number of cameras
@@ -641,13 +641,13 @@ struct mjModel_ {
   int npluginstate;               // number of fields in plugin state vector
 
   size_t narena;                  // number of bytes in the mjData arena (inclusive of stack)
-  size_t nbuffer;                 // number of bytes in buffer
+  size_t nbuffer;                 // 缓存的字节数量   number of bytes in buffer
 
   // ------------------------------- options and statistics
 
-  mjOption opt;                   // physics options
-  mjVisual vis;                   // visualization options
-  mjStatistic stat;               // model statistics
+  mjOption opt;                   // 物理配置       physics options
+  mjVisual vis;                   // 可视化配置     visualization options
+  mjStatistic stat;               // 模型的统计信息 model statistics
 
   // ------------------------------- buffers
 
