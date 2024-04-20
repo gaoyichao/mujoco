@@ -22,11 +22,15 @@
 extern "C" {
 #endif
 
-
-
-// parse XML file in MJCF or URDF format, compile it, return low-level model
-//  if vfs is not NULL, look up files in vfs before reading from disk
-//  error can be NULL; otherwise assumed to have size error_sz
+/**
+ * @brief 解析 MJCF 或 URDF 格式的 XML 文件，编译它，并返回底层的模型对象
+ * 
+ * @param [in] filename 文件名
+ * @param [in] vfs 虚拟文件系统对象，如果非 NULL 则优先从 vfs 中查找文件
+ * @param [out] error 错误消息缓存
+ * @param [in] error_sz 错误消息缓存大小
+ * @return 底层的模型数据对象
+ */
 MJAPI mjModel* mj_loadXML(const char* filename, const mjVFS* vfs, char* error, int error_sz);
 
 // update XML data structures with info from low-level model, save as MJCF

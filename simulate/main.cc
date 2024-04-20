@@ -251,173 +251,149 @@ mjModel* LoadModel(const char* file, mj::Simulate& sim) {
 
 // simulate in background thread (while rendering in main thread)
 void PhysicsLoop(mj::Simulate& sim) {
-  // cpu-sim syncronization point
-  std::chrono::time_point<mj::Simulate::Clock> syncCPU;
-  mjtNum syncSim = 0;
+    // cpu-sim syncronization point
+    std::chrono::time_point<mj::Simulate::Clock> syncCPU;
+    mjtNum syncSim = 0;
 
-  // run until asked to exit
-  while (!sim.exitrequest.load()) {
-    if (sim.droploadrequest.load()) {
-      sim.LoadMessage(sim.dropfilename);
-      mjModel* mnew = LoadModel(sim.dropfilename, sim);
-      sim.droploadrequest.store(false);
+    // run until asked to exit
+    while (!sim.exitrequest.load()) {
+        if (sim.droploadrequest.load()) {
+            sim.LoadMessage(sim.dropfilename);
+            mjModel* mnew = LoadModel(sim.dropfilename, sim);
+            sim.droploadrequest.store(false);
 
-      mjData* dnew = nullptr;
-      if (mnew) dnew = mj_makeData(mnew);
-      if (dnew) {
-        sim.Load(mnew, dnew, sim.dropfilename);
+            mjData* dnew = nullptr;
+            if (mnew)
+                dnew = mj_makeData(mnew);
 
-        // lock the sim mutex
-        const std::unique_lock<std::recursive_mutex> lock(sim.mtx);
+            if (dnew) {
+                sim.Load(mnew, dnew, sim.dropfilename);
+                // lock the sim mutex
+                const std::unique_lock<std::recursive_mutex> lock(sim.mtx);
+                mj_deleteData(d);
+                mj_deleteModel(m);
 
-        mj_deleteData(d);
-        mj_deleteModel(m);
+                m = mnew;
+                d = dnew;
+                mj_forward(m, d);
 
-        m = mnew;
-        d = dnew;
-        mj_forward(m, d);
-
-        // allocate ctrlnoise
-        free(ctrlnoise);
-        ctrlnoise = (mjtNum*) malloc(sizeof(mjtNum)*m->nu);
-        mju_zero(ctrlnoise, m->nu);
-      } else {
-        sim.LoadMessageClear();
-      }
-    }
-
-    if (sim.uiloadrequest.load()) {
-      sim.uiloadrequest.fetch_sub(1);
-      sim.LoadMessage(sim.filename);
-      mjModel* mnew = LoadModel(sim.filename, sim);
-      mjData* dnew = nullptr;
-      if (mnew) dnew = mj_makeData(mnew);
-      if (dnew) {
-        sim.Load(mnew, dnew, sim.filename);
-
-        // lock the sim mutex
-        const std::unique_lock<std::recursive_mutex> lock(sim.mtx);
-
-        mj_deleteData(d);
-        mj_deleteModel(m);
-
-        m = mnew;
-        d = dnew;
-        mj_forward(m, d);
-
-        // allocate ctrlnoise
-        free(ctrlnoise);
-        ctrlnoise = static_cast<mjtNum*>(malloc(sizeof(mjtNum)*m->nu));
-        mju_zero(ctrlnoise, m->nu);
-      } else {
-        sim.LoadMessageClear();
-      }
-    }
-
-    // sleep for 1 ms or yield, to let main thread run
-    //  yield results in busy wait - which has better timing but kills battery life
-    if (sim.run && sim.busywait) {
-      std::this_thread::yield();
-    } else {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-
-    {
-      // lock the sim mutex
-      const std::unique_lock<std::recursive_mutex> lock(sim.mtx);
-
-      // run only if model is present
-      if (m) {
-        // running
-        if (sim.run) {
-          bool stepped = false;
-
-          // record cpu time at start of iteration
-          const auto startCPU = mj::Simulate::Clock::now();
-
-          // elapsed CPU and simulation time since last sync
-          const auto elapsedCPU = startCPU - syncCPU;
-          double elapsedSim = d->time - syncSim;
-
-          // inject noise
-          if (sim.ctrl_noise_std) {
-            // convert rate and scale to discrete time (Ornstein–Uhlenbeck)
-            mjtNum rate = mju_exp(-m->opt.timestep / mju_max(sim.ctrl_noise_rate, mjMINVAL));
-            mjtNum scale = sim.ctrl_noise_std * mju_sqrt(1-rate*rate);
-
-            for (int i=0; i<m->nu; i++) {
-              // update noise
-              ctrlnoise[i] = rate * ctrlnoise[i] + scale * mju_standardNormal(nullptr);
-
-              // apply noise
-              d->ctrl[i] = ctrlnoise[i];
+                // allocate ctrlnoise
+                free(ctrlnoise);
+                ctrlnoise = (mjtNum*) malloc(sizeof(mjtNum)*m->nu);
+                mju_zero(ctrlnoise, m->nu);
+            } else {
+                sim.LoadMessageClear();
             }
-          }
+        }
+        if (sim.uiloadrequest.load()) {
+            sim.uiloadrequest.fetch_sub(1);
+            sim.LoadMessage(sim.filename);
+            mjModel* mnew = LoadModel(sim.filename, sim);
+            mjData* dnew = nullptr;
+            if (mnew)
+                dnew = mj_makeData(mnew);
+            if (dnew) {
+                sim.Load(mnew, dnew, sim.filename);
+                // lock the sim mutex
+                const std::unique_lock<std::recursive_mutex> lock(sim.mtx);
+                mj_deleteData(d);
+                mj_deleteModel(m);
 
-          // requested slow-down factor
-          double slowdown = 100 / sim.percentRealTime[sim.real_time_index];
+                m = mnew;
+                d = dnew;
+                mj_forward(m, d);
 
-          // misalignment condition: distance from target sim time is bigger than syncmisalign
-          bool misaligned =
-              mju_abs(Seconds(elapsedCPU).count()/slowdown - elapsedSim) > syncMisalign;
-
-          // out-of-sync (for any reason): reset sync times, step
-          if (elapsedSim < 0 || elapsedCPU.count() < 0 || syncCPU.time_since_epoch().count() == 0 ||
-              misaligned || sim.speed_changed) {
-            // re-sync
-            syncCPU = startCPU;
-            syncSim = d->time;
-            sim.speed_changed = false;
-
-            // run single step, let next iteration deal with timing
-            mj_step(m, d);
-            stepped = true;
-          }
-
-          // in-sync: step until ahead of cpu
-          else {
-            bool measured = false;
-            mjtNum prevSim = d->time;
-
-            double refreshTime = simRefreshFraction/sim.refresh_rate;
-
-            // step while sim lags behind cpu and within refreshTime
-            while (Seconds((d->time - syncSim)*slowdown) < mj::Simulate::Clock::now() - syncCPU &&
-                   mj::Simulate::Clock::now() - startCPU < Seconds(refreshTime)) {
-              // measure slowdown before first step
-              if (!measured && elapsedSim) {
-                sim.measured_slowdown =
-                    std::chrono::duration<double>(elapsedCPU).count() / elapsedSim;
-                measured = true;
-              }
-
-              // call mj_step
-              mj_step(m, d);
-              stepped = true;
-
-              // break if reset
-              if (d->time < prevSim) {
-                break;
-              }
+                // allocate ctrlnoise
+                free(ctrlnoise);
+                ctrlnoise = static_cast<mjtNum*>(malloc(sizeof(mjtNum)*m->nu));
+                mju_zero(ctrlnoise, m->nu);
+            } else {
+                sim.LoadMessageClear();
             }
-          }
-
-          // save current state to history buffer
-          if (stepped) {
-            sim.AddToHistory();
-          }
         }
 
-        // paused
-        else {
-          // run mj_forward, to update rendering and joint sliders
-          mj_forward(m, d);
-          sim.speed_changed = true;
+        if (sim.run && sim.busywait)
+            std::this_thread::yield();
+        else
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+        {
+            const std::unique_lock<std::recursive_mutex> lock(sim.mtx);
+            if (nullptr == m)
+                continue;
+
+            if (!sim.run) {
+                // PAUSED: run mj_forward, to update rendering and joint sliders
+                mj_forward(m, d);
+                sim.speed_changed = true;
+                continue;
+            }
+
+            bool stepped = false;
+            const auto startCPU = mj::Simulate::Clock::now();
+            const auto elapsedCPU = startCPU - syncCPU;
+            double elapsedSim = d->time - syncSim;
+
+            if (sim.ctrl_noise_std) {
+                // convert rate and scale to discrete time (Ornstein–Uhlenbeck)
+                mjtNum rate = mju_exp(-m->opt.timestep / mju_max(sim.ctrl_noise_rate, mjMINVAL));
+                mjtNum scale = sim.ctrl_noise_std * mju_sqrt(1-rate*rate);
+                for (int i=0; i<m->nu; i++) {
+                    ctrlnoise[i] = rate * ctrlnoise[i] + scale * mju_standardNormal(nullptr);
+                    d->ctrl[i] = ctrlnoise[i];
+                }
+            }
+
+            // requested slow-down factor
+            double slowdown = 100 / sim.percentRealTime[sim.real_time_index];
+            // misalignment condition: distance from target sim time is bigger than syncmisalign
+            bool misaligned =
+                mju_abs(Seconds(elapsedCPU).count()/slowdown - elapsedSim) > syncMisalign;
+
+            if (elapsedSim < 0 || elapsedCPU.count() < 0 || syncCPU.time_since_epoch().count() == 0 ||
+                misaligned || sim.speed_changed) {
+                // out-of-sync (for any reason): reset sync times, step
+                // re-sync
+                syncCPU = startCPU;
+                syncSim = d->time;
+                sim.speed_changed = false;
+                // run single step, let next iteration deal with timing
+                mj_step(m, d);
+                stepped = true;
+            } else {
+                // in-sync: step until ahead of cpu
+                bool measured = false;
+                mjtNum prevSim = d->time;
+                double refreshTime = simRefreshFraction/sim.refresh_rate;
+
+                // step while sim lags behind cpu and within refreshTime
+                while (Seconds((d->time - syncSim)*slowdown) < mj::Simulate::Clock::now() - syncCPU &&
+                     mj::Simulate::Clock::now() - startCPU < Seconds(refreshTime)) {
+                    // measure slowdown before first step
+                    if (!measured && elapsedSim) {
+                      sim.measured_slowdown =
+                          std::chrono::duration<double>(elapsedCPU).count() / elapsedSim;
+                      measured = true;
+                    }
+
+                    // call mj_step
+                    mj_step(m, d);
+                    stepped = true;
+
+                    // break if reset
+                    if (d->time < prevSim) {
+                      break;
+                    }
+                }
+            }
+
+            // save current state to history buffer
+            if (stepped)
+                sim.AddToHistory();
         }
-      }
-    }  // release std::lock_guard<std::mutex>
-  }
+    }
 }
+
 }  // namespace
 
 //-------------------------------------- physics_thread --------------------------------------------
@@ -460,54 +436,31 @@ void PhysicsThread(mj::Simulate* sim, const char* filename) {
 
 //------------------------------------------ main --------------------------------------------------
 
-// machinery for replacing command line error by a macOS dialog box when running under Rosetta
-#if defined(__APPLE__) && defined(__AVX__)
-extern void DisplayErrorDialogBox(const char* title, const char* msg);
-static const char* rosetta_error_msg = nullptr;
-__attribute__((used, visibility("default"))) extern "C" void _mj_rosettaError(const char* msg) {
-  rosetta_error_msg = msg;
-}
-#endif
-
 // run event loop
 int main(int argc, char** argv) {
-
-  // display an error if running on macOS under Rosetta 2
-#if defined(__APPLE__) && defined(__AVX__)
-  if (rosetta_error_msg) {
-    DisplayErrorDialogBox("Rosetta 2 is not supported", rosetta_error_msg);
-    std::exit(1);
-  }
-#endif
-
   // print version, check compatibility
   std::printf("MuJoCo version %s\n", mj_versionString());
-  if (mjVERSION_HEADER!=mj_version()) {
+  if (mjVERSION_HEADER != mj_version()) {
     mju_error("Headers and library have different versions");
   }
-
   // scan for libraries in the plugin directory to load additional plugins
   scanPluginLibraries();
 
   mjvCamera cam;
-  mjv_defaultCamera(&cam);
-
   mjvOption opt;
-  mjv_defaultOption(&opt);
-
   mjvPerturb pert;
+
+  mjv_defaultCamera(&cam);
+  mjv_defaultOption(&opt);
   mjv_defaultPerturb(&pert);
+
+  const char* filename = (argc >  1) ? argv[1] : nullptr;
 
   // simulate object encapsulates the UI
   auto sim = std::make_unique<mj::Simulate>(
       std::make_unique<mj::GlfwAdapter>(),
       &cam, &opt, &pert, /* is_passive = */ false
   );
-
-  const char* filename = nullptr;
-  if (argc >  1) {
-    filename = argv[1];
-  }
 
   // start physics thread
   std::thread physicsthreadhandle(&PhysicsThread, sim.get(), filename);

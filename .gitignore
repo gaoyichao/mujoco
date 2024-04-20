@@ -9,6 +9,7 @@
 *.o
 *.so
 *.so.*
+*.sw*
 
 # Exclude editor config
 .vscode/

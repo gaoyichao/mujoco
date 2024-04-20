@@ -25,7 +25,15 @@
 // Main writer function
 std::string mjWriteXML(mjCModel* model, char* error, int error_sz);
 
-// Main parser function
+/**
+ * @brief 解析 MJCF 或 URDF 格式的 XML 文件，编译它，并返回上层的模型对象
+ * 
+ * @param [in] filename 文件名
+ * @param [in] vfs 虚拟文件系统对象，如果非 NULL 则优先从 vfs 中查找文件
+ * @param [out] error 错误消息缓存
+ * @param [in] error_sz 错误消息缓存大小
+ * @return 上层的模型数据对象
+ */
 mjCModel* mjParseXML(const char* filename, const mjVFS* vfs, char* error, int error_sz);
 
 
