@@ -33,7 +33,7 @@
 
 //--------------------------- position -------------------------------------------------------------
 
-// forward kinematics
+
 void mj_kinematics(const mjModel* m, mjData* d) {
   // set world position and orientation
   mju_zero3(d->xpos);
@@ -48,11 +48,16 @@ void mj_kinematics(const mjModel* m, mjData* d) {
   mj_normalizeQuat(m, d->qpos);
 
   // normalize mocap quaternions
+  // 关于 mocap 可以参考
+  // https://github.com/mochan-b/mujoco_mocap_tutorial
+  // https://mochan.org/posts/mujoco_mocap_1/
+  // https://mochan.org/posts/mujoco-mocap-2/
   for (int i=0; i < m->nmocap; i++) {
     mju_normalize4(d->mocap_quat+4*i);
   }
 
   // compute global cartesian positions and orientations of all bodies
+  // 计算所有刚体的全局笛卡尔坐标和姿态
   for (int i=1; i < m->nbody; i++) {
     mjtNum xpos[3], xquat[4];
     int jntadr = m->body_jntadr[i];
@@ -70,10 +75,8 @@ void mj_kinematics(const mjModel* m, mjData* d) {
       // assign xanchor and xaxis
       mju_copy3(d->xanchor+3*jntadr, xpos);
       mju_copy3(d->xaxis+3*jntadr, m->jnt_axis+3*jntadr);
-    }
-
-    // regular or no joint
-    else {
+    } else {
+      // regular or no joint
       int pid = m->body_parentid[i];
 
       // get body pos and quat: from model or mocap
@@ -86,8 +89,8 @@ void mj_kinematics(const mjModel* m, mjData* d) {
         bodyquat = m->body_quat+4*i;
       }
 
-      // apply fixed translation and rotation relative to parent
       if (pid) {
+        // 相对于父节点完成旋转和平移
         mju_rotVecMat(xpos, bodypos, d->xmat+9*pid);
         mju_addTo3(xpos, d->xpos+3*pid);
         mju_mulQuat(xquat, d->xquat+4*pid, bodyquat);
@@ -106,6 +109,7 @@ void mj_kinematics(const mjModel* m, mjData* d) {
         mjtJoint jtype = m->jnt_type[jid];
 
         // compute axis in global frame; ball jnt_axis is (0,0,1), set by compiler
+        // 将关节轴转换到世界坐标系下
         mju_rotVecQuat(xaxis, m->jnt_axis+3*jid, xquat);
 
         // compute anchor in global frame
@@ -180,7 +184,6 @@ void mj_kinematics(const mjModel* m, mjData* d) {
 
 
 
-// map inertias and motion dofs to global frame centered at subtree-CoM
 void mj_comPos(const mjModel* m, mjData* d) {
   mjtNum offset[3], axis[3];
   mj_markStack(d);
@@ -1298,10 +1301,9 @@ void mj_crb(const mjModel* m, mjData* d) {
   TM_END(mjTIMER_POS_INERTIA);
 }
 
-
-
 // sparse L'*D*L factorizaton of inertia-like matrix M, assumed spd
-void mj_factorI(const mjModel* m, mjData* d, const mjtNum* M, mjtNum* qLD, mjtNum* qLDiagInv,
+void mj_factorI(const mjModel* m, mjData* d,
+                const mjtNum* M, mjtNum* qLD, mjtNum* qLDiagInv,
                 mjtNum* qLDiagSqrtInv) {
   int cnt;
   int Madr_kk, Madr_ki;
@@ -1364,8 +1366,6 @@ void mj_factorI(const mjModel* m, mjData* d, const mjtNum* M, mjtNum* qLD, mjtNu
     }
   }
 }
-
-
 
 // sparse L'*D*L factorizaton of the inertia matrix M, assumed spd
 void mj_factorM(const mjModel* m, mjData* d) {

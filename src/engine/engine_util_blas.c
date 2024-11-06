@@ -37,8 +37,6 @@ void mju_zero3(mjtNum res[3]) {
 }
 
 
-
-// res = vec
 void mju_copy3(mjtNum res[3], const mjtNum data[3]) {
   res[0] = data[0];
   res[1] = data[1];
@@ -151,8 +149,6 @@ mjtNum mju_dist3(const mjtNum pos1[3], const mjtNum pos2[3]) {
 }
 
 
-
-// multiply vector by 3D rotation matrix
 void mju_rotVecMat(mjtNum res[3], const mjtNum vec[3], const mjtNum mat[9]) {
   mjtNum tmp[3] = {
     mat[0]*vec[0] + mat[1]*vec[1] + mat[2]*vec[2],
@@ -209,9 +205,12 @@ void mju_copy4(mjtNum res[4], const mjtNum data[4]) {
   res[3] = data[3];
 }
 
-
-
-// normalize vector, return length before normalization
+/**
+ * @brief 归一化向量(四元数)
+ * 
+ * @param [in|out] vec 向量地址
+ * @return 归一化之前的向量模长
+ */
 mjtNum mju_normalize4(mjtNum vec[4]) {
   mjtNum norm = mju_sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2] + vec[3]*vec[3]);
 

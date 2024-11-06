@@ -67,7 +67,9 @@ extern "C" {
 // res = 0
 MJAPI void mju_zero3(mjtNum res[3]);
 
-// res = vec
+/**
+ * @brief 拷贝三维数组 res = data
+ */
 MJAPI void mju_copy3(mjtNum res[3], const mjtNum data[3]);
 
 // res = vec*scl
@@ -103,7 +105,13 @@ MJAPI mjtNum mju_dot3(const mjtNum vec1[3], const mjtNum vec2[3]);
 // Cartesian distance between 3D vectors
 MJAPI mjtNum mju_dist3(const mjtNum pos1[3], const mjtNum pos2[3]);
 
-// multiply vector by 3D rotation matrix
+/**
+ * @brief 对三维向量 vec 作用旋转矩阵 mat
+ * 
+ * @param [out] res 旋转后的向量坐标
+ * @param [in]  vec 待旋转的向量坐标
+ * @param [in]  mat 旋转矩阵 3x3
+ */
 MJAPI void mju_rotVecMat(mjtNum res[3], const mjtNum vec[3], const mjtNum mat[9]);
 
 // multiply vector by transposed 3D rotation matrix
@@ -121,7 +129,12 @@ MJAPI void mju_unit4(mjtNum res[4]);
 // res = vec
 MJAPI void mju_copy4(mjtNum res[4], const mjtNum data[4]);
 
-// normalize vector, return length before normalization
+/**
+ * @brief 归一化向量(四元数)
+ * 
+ * @param [in|out] vec 向量地址
+ * @return 归一化之前的向量模长
+ */
 MJAPI mjtNum mju_normalize4(mjtNum vec[4]);
 
 

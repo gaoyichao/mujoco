@@ -419,7 +419,7 @@ void mju_mulInertVec(mjtNum res[6], const mjtNum i[10], const mjtNum v[6]) {
   res[5] = i[7]*v[0] - i[6]*v[1] + i[9]*v[5];
 }
 
-
+/*  */
 
 // express motion axis in com-based frame
 void mju_dofCom(mjtNum res[6], const mjtNum axis[3], const mjtNum offset[3]) {

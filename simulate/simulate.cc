@@ -36,145 +36,137 @@
 #include "platform_ui_adapter.h"
 #include "array_safety.h"
 
-// When launched via an App Bundle on macOS, the working directory is the path to the App Bundle's
-// resource directory. This causes files to be saved into the bundle, which is not the desired
-// behavior. Instead, we open a save dialog box to ask the user where to put the file.
-// Since the dialog box logic needs to be written in Objective-C, we separate it into a different
-// source file.
-#ifdef __APPLE__
-std::string GetSavePath(const char* filename);
-#else
+#include <iostream>
+
 static std::string GetSavePath(const char* filename) {
-  return filename;
+    return filename;
 }
-#endif
 
 namespace {
-namespace mj = ::mujoco;
-namespace mju = ::mujoco::sample_util;
+    namespace mj = ::mujoco;
+    namespace mju = ::mujoco::sample_util;
 
-using Seconds = std::chrono::duration<double>;
-using Milliseconds = std::chrono::duration<double, std::milli>;
+    using Seconds = std::chrono::duration<double>;
+    using Milliseconds = std::chrono::duration<double, std::milli>;
 
-template <typename T>
-inline bool IsDifferent(const T& a, const T& b) {
-  if constexpr (std::is_array_v<T>) {
-    static_assert(std::rank_v<T> == 1);
-    for (int i = 0; i < std::extent_v<T>; ++i) {
-      if (a[i] != b[i]) {
-        return true;
-      }
+    template <typename T>
+    inline bool IsDifferent(const T& a, const T& b) {
+        if constexpr (std::is_array_v<T>) {
+            static_assert(std::rank_v<T> == 1);
+            for (int i = 0; i < std::extent_v<T>; ++i) {
+                if (a[i] != b[i])
+                    return true;
+            }
+            return false;
+        } else {
+            return a != b;
+        }
     }
-    return false;
-  } else {
-    return a != b;
-  }
-}
 
-template <typename T>
-inline void CopyScalar(T& dst, const T& src) {
-  dst = src;
-}
+    template <typename T>
+    inline void CopyScalar(T& dst, const T& src) {
+        dst = src;
+    }
 
-template <typename T, int N>
-inline void CopyArray(T (&dst)[N], const T (&src)[N]) {
-  for (int i = 0; i < N; ++i) {
-    dst[i] = src[i];
-  }
-}
+    template <typename T, int N>
+    inline void CopyArray(T (&dst)[N], const T (&src)[N]) {
+        for (int i = 0; i < N; ++i)
+            dst[i] = src[i];
+    }
 
-template <typename T>
-inline void Copy(T& dst, const T& src) {
-  if constexpr (std::is_array_v<T>) {
-    CopyArray(dst, src);
-  } else {
-    CopyScalar(dst, src);
-  }
-}
+    template <typename T>
+    inline void Copy(T& dst, const T& src) {
+        if constexpr (std::is_array_v<T>) {
+            CopyArray(dst, src);
+        } else {
+            CopyScalar(dst, src);
+        }
+    }
 
 //------------------------------------------- global -----------------------------------------------
 
-const double zoom_increment = 0.02;  // ratio of one click-wheel zoom increment to vertical extent
+    // ratio of one click-wheel zoom increment to vertical extent
+    const double zoom_increment = 0.02;
 
-// section ids
-enum {
-  // left ui
-  SECT_FILE   = 0,
-  SECT_OPTION,
-  SECT_SIMULATION,
-  SECT_WATCH,
-  SECT_PHYSICS,
-  SECT_RENDERING,
-  SECT_VISUALIZATION,
-  SECT_GROUP,
-  NSECT0,
+    // section ids
+    enum {
+        // left ui
+        SECT_FILE   = 0,
+        SECT_OPTION,
+        SECT_SIMULATION,
+        SECT_WATCH,
+        SECT_PHYSICS,
+        SECT_RENDERING,
+        SECT_VISUALIZATION,
+        SECT_GROUP,
+        NSECT0,
 
-  // right ui
-  SECT_JOINT = 0,
-  SECT_CONTROL,
-  NSECT1
-};
+        // right ui
+        SECT_JOINT = 0,
+        SECT_CONTROL,
+        NSECT1
+    };
 
-// file section of UI
-const mjuiDef defFile[] = {
-  {mjITEM_SECTION,   "File",          1, nullptr,                    "AF"},
-  {mjITEM_BUTTON,    "Save xml",      2, nullptr,                    ""},
-  {mjITEM_BUTTON,    "Save mjb",      2, nullptr,                    ""},
-  {mjITEM_BUTTON,    "Print model",   2, nullptr,                    "CM"},
-  {mjITEM_BUTTON,    "Print data",    2, nullptr,                    "CD"},
-  {mjITEM_BUTTON,    "Quit",          1, nullptr,                    "CQ"},
-  {mjITEM_BUTTON,    "Screenshot",    2, nullptr,                    "CP"},
-  {mjITEM_END}
-};
+    // file section of UI
+    const mjuiDef defFile[] = {
+        {mjITEM_SECTION,   "File",          1, nullptr,                    "AF"},
+        {mjITEM_BUTTON,    "Save xml",      2, nullptr,                    ""},
+        {mjITEM_BUTTON,    "Save mjb",      2, nullptr,                    ""},
+        {mjITEM_BUTTON,    "Print model",   2, nullptr,                    "CM"},
+        {mjITEM_BUTTON,    "Print data",    2, nullptr,                    "CD"},
+        {mjITEM_BUTTON,    "Quit",          1, nullptr,                    "CQ"},
+        {mjITEM_BUTTON,    "Screenshot",    2, nullptr,                    "CP"},
+        {mjITEM_END}
+    };
 
-// help strings
-const char help_content[] =
-  "Space\n"
-  "+  -\n"
-  "Left / Right arrow\n"
-  "Tab / Shift-Tab\n"
-  "[  ]\n"
-  "Esc\n"
-  "Double-click\n"
-  "Page Up\n"
-  "Right double-click\n"
-  "Ctrl Right double-click\n"
-  "Scroll, middle drag\n"
-  "Left drag\n"
-  "[Shift] right drag\n"
-  "Ctrl [Shift] drag\n"
-  "Ctrl [Shift] right drag\n"
-  "F1\n"
-  "F2\n"
-  "F3\n"
-  "F4\n"
-  "F5\n"
-  "UI right-button hold\n"
-  "UI title double-click";
+    // help strings
+    const char help_content[] =
+      "Space\n"
+      "+  -\n"
+      "Left / Right arrow\n"
+      "Tab / Shift-Tab\n"
+      "[  ]\n"
+      "Esc\n"
+      "Double-click\n"
+      "Page Up\n"
+      "Right double-click\n"
+      "Ctrl Right double-click\n"
+      "Scroll, middle drag\n"
+      "Left drag\n"
+      "[Shift] right drag\n"
+      "Ctrl [Shift] drag\n"
+      "Ctrl [Shift] right drag\n"
+      "F1\n"
+      "F2\n"
+      "F3\n"
+      "F4\n"
+      "F5\n"
+      "UI right-button hold\n"
+      "UI title double-click";
 
-const char help_title[] =
-  "Play / Pause\n"
-  "Speed Up / Down\n"
-  "Step Back / Forward\n"
-  "Toggle Left / Right UI\n"
-  "Cycle cameras\n"
-  "Free camera\n"
-  "Select\n"
-  "Select parent\n"
-  "Center camera\n"
-  "Tracking camera\n"
-  "Zoom\n"
-  "View Orbit\n"
-  "View Pan\n"
-  "Object Rotate\n"
-  "Object Translate\n"
-  "Help\n"
-  "Info\n"
-  "Profiler\n"
-  "Sensors\n"
-  "Full screen\n"
-  "Show UI shortcuts\n"
-  "Expand/collapse all";
+    const char help_title[] =
+      "Play / Pause\n"
+      "Speed Up / Down\n"
+      "Step Back / Forward\n"
+      "Toggle Left / Right UI\n"
+      "Cycle cameras\n"
+      "Free camera\n"
+      "Select\n"
+      "Select parent\n"
+      "Center camera\n"
+      "Tracking camera\n"
+      "Zoom\n"
+      "View Orbit\n"
+      "View Pan\n"
+      "Object Rotate\n"
+      "Object Translate\n"
+      "Help\n"
+      "Info\n"
+      "Profiler\n"
+      "Sensors\n"
+      "Full screen\n"
+      "Show UI shortcuts\n"
+      "Expand/collapse all";
 
 
 //-------------------------------- profiler, sensor, info, watch -----------------------------------
@@ -446,7 +438,6 @@ void ShowProfiler(mj::Simulate* sim, mjrRect rect) {
   viewport.bottom += rect.height/4;
   mjr_figure(viewport, &sim->figconstraint, &sim->platform_ui->mjr_context());
 }
-
 
 // init sensor figure
 void InitializeSensor(mj::Simulate* sim) {
@@ -753,8 +744,6 @@ void MakePhysicsSection(mj::Simulate* sim, int oldstate) {
   // add actuator group enable/disable
   mjui_add(&sim->ui0, defDisableActuator);
 }
-
-
 
 // make rendering section of UI
 void MakeRenderingSection(mj::Simulate* sim, const mjModel* m, int oldstate) {
@@ -1086,6 +1075,7 @@ void MakeControlSection(mj::Simulate* sim, int oldstate) {
     }
     if (!sim->actuator_names_[i].empty()) {
       mju::strcpy_arr(defSlider[0].name, sim->actuator_names_[i].c_str());
+      std::cout << "load: " << sim->actuator_names_[i] << std::endl;
     } else {
       mju::sprintf_arr(defSlider[0].name, "control %d", i);
     }

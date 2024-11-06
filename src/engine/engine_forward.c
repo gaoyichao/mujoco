@@ -47,7 +47,12 @@
 
 //--------------------------- check values ---------------------------------------------------------
 
-// check positions, reset if bad
+/**
+ * @brief 检查位置数据，若不合适则重置
+ * 
+ * @param [in] m 模型对象
+ * @param [in|out] d 模型数据
+ */
 void mj_checkPos(const mjModel* m, mjData* d) {
   for (int i=0; i < m->nq; i++) {
     if (mju_isBad(d->qpos[i])) {
@@ -62,7 +67,12 @@ void mj_checkPos(const mjModel* m, mjData* d) {
 
 
 
-// check velocities, reset if bad
+/**
+ * @brief 检查速度数据，若不合适则重置
+ * 
+ * @param [in] m 模型对象
+ * @param [in|out] d 模型数据
+ */
 void mj_checkVel(const mjModel* m, mjData* d) {
   for (int i=0; i < m->nv; i++) {
     if (mju_isBad(d->qvel[i])) {
@@ -117,9 +127,12 @@ void* mj_collisionThreaded(void* args) {
   return NULL;
 }
 
-
-
-// position-dependent computations
+/**
+ * @brief 位置相关的计算, position-dependent computations
+ * 
+ * @param [in] m 模型对象
+ * @param [in|out] d 模型数据
+ */
 void mj_fwdPosition(const mjModel* m, mjData* d) {
   TM_START1;
 
@@ -987,7 +1000,14 @@ void mj_implicit(const mjModel* m, mjData* d) {
 
 //-------------------------- top-level API ---------------------------------------------------------
 
-// forward dynamics with skip; skipstage is mjtStage
+/**
+ * @brief forward dynamics with skip; skipstage is mjtStage
+ * 
+ * @param [in] m 模型对象
+ * @param [in|out] d 模型数据
+ * @param [in] skipstage
+ * @param [in] skipsensor 是否跳过传感器的计算
+ */
 void mj_forwardSkip(const mjModel* m, mjData* d, int skipstage, int skipsensor) {
   TM_START;
 
@@ -1030,7 +1050,12 @@ void mj_forwardSkip(const mjModel* m, mjData* d, int skipstage, int skipsensor) 
 
 
 
-// forward dynamics
+/**
+ * @brief 正动力学
+ * 
+ * @param [in] m 模型对象
+ * @param [in|out] d 模型数据
+ */
 void mj_forward(const mjModel* m, mjData* d) {
   mj_forwardSkip(m, d, mjSTAGE_NONE, 0);
 }

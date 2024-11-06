@@ -600,8 +600,8 @@ struct mjModel_ {
   int ntex;                       // number of textures
   int ntexdata;                   // number of bytes in texture rgb data
   int nmat;                       // number of materials
-  int npair;                      // number of predefined geom pairs
-  int nexclude;                   // number of excluded geom pairs
+  int npair;                      // 预定义几何对数量           number of predefined geom pairs
+  int nexclude;                   // 不参与碰撞检测的几何对数量 number of excluded geom pairs
   int neq;                        // number of equality constraints
   int ntendon;                    // number of tendons
   int nwrap;                      // number of wrap objects in all tendon paths
@@ -659,8 +659,8 @@ struct mjModel_ {
   mjtNum*   qpos_spring;          // reference pose for springs               (nq x 1)
 
   // bodies
-  int*      body_parentid;        // id of body's parent                      (nbody x 1)
-  int*      body_rootid;          // id of root above body                    (nbody x 1)
+  int*      body_parentid;        // 刚体的父节点 id                          (nbody x 1)
+  int*      body_rootid;          // 刚体的根节点 id (parentid[rootid] = 0)   (nbody x 1)
   int*      body_weldid;          // id of body that this body is welded to   (nbody x 1)
   int*      body_mocapid;         // id of mocap data; -1: none               (nbody x 1)
   int*      body_jntnum;          // number of joints for this body           (nbody x 1)
@@ -676,7 +676,7 @@ struct mjModel_ {
   mjtNum*   body_quat;            // orientation offset rel. to parent body   (nbody x 4)
   mjtNum*   body_ipos;            // local position of center of mass         (nbody x 3)
   mjtNum*   body_iquat;           // local orientation of inertia ellipsoid   (nbody x 4)
-  mjtNum*   body_mass;            // mass                                     (nbody x 1)
+  mjtNum*   body_mass;            // 刚体质量                                 (nbody x 1)
   mjtNum*   body_subtreemass;     // mass of subtree starting at this body    (nbody x 1)
   mjtNum*   body_inertia;         // diagonal inertia in ipos/iquat frame     (nbody x 3)
   mjtNum*   body_invweight0;      // mean inv inert in qpos0 (trn, rot)       (nbody x 2)
@@ -701,14 +701,14 @@ struct mjModel_ {
   int*      jnt_dofadr;           // start addr in 'qvel' for joint's data    (njnt x 1)
   int*      jnt_bodyid;           // id of joint's body                       (njnt x 1)
   int*      jnt_group;            // group for visibility                     (njnt x 1)
-  mjtByte*  jnt_limited;          // does joint have limits                   (njnt x 1)
+  mjtByte*  jnt_limited;          // 标记一个关节是否有限幅                       (njnt x 1)
   mjtByte*  jnt_actfrclimited;    // does joint have actuator force limits    (njnt x 1)
   mjtNum*   jnt_solref;           // constraint solver reference: limit       (njnt x mjNREF)
   mjtNum*   jnt_solimp;           // constraint solver impedance: limit       (njnt x mjNIMP)
   mjtNum*   jnt_pos;              // local anchor position                    (njnt x 3)
   mjtNum*   jnt_axis;             // local joint axis                         (njnt x 3)
   mjtNum*   jnt_stiffness;        // stiffness coefficient                    (njnt x 1)
-  mjtNum*   jnt_range;            // joint limits                             (njnt x 2)
+  mjtNum*   jnt_range;            // 关节限幅 joint limits                     (njnt x 2)
   mjtNum*   jnt_actfrcrange;      // range of total actuator force            (njnt x 2)
   mjtNum*   jnt_margin;           // min distance for limit detection         (njnt x 1)
   mjtNum*   jnt_user;             // user data                                (njnt x nuser_jnt)
@@ -989,14 +989,14 @@ struct mjModel_ {
   int*      actuator_actadr;      // first activation address; -1: stateless  (nu x 1)
   int*      actuator_actnum;      // number of activation variables           (nu x 1)
   int*      actuator_group;       // group for visibility                     (nu x 1)
-  mjtByte*  actuator_ctrllimited; // is control limited                       (nu x 1)
+  mjtByte*  actuator_ctrllimited; // 控制器是否有限制                            (nu x 1)
   mjtByte*  actuator_forcelimited;// is force limited                         (nu x 1)
   mjtByte*  actuator_actlimited;  // is activation limited                    (nu x 1)
   mjtNum*   actuator_dynprm;      // dynamics parameters                      (nu x mjNDYN)
   mjtNum*   actuator_gainprm;     // gain parameters                          (nu x mjNGAIN)
   mjtNum*   actuator_biasprm;     // bias parameters                          (nu x mjNBIAS)
   mjtByte*  actuator_actearly;    // step activation before force             (nu x 1)
-  mjtNum*   actuator_ctrlrange;   // range of controls                        (nu x 2)
+  mjtNum*   actuator_ctrlrange;   // 控制器的限幅                               (nu x 2)
   mjtNum*   actuator_forcerange;  // range of forces                          (nu x 2)
   mjtNum*   actuator_actrange;    // range of activations                     (nu x 2)
   mjtNum*   actuator_gear;        // scale length and transmitted force       (nu x 6)

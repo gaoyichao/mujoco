@@ -199,7 +199,19 @@ MJAPI void mj_integratePos(const mjModel* m, mjtNum* qpos, const mjtNum* qvel, m
 // normalize all quaternions in qpos-type vector
 MJAPI void mj_normalizeQuat(const mjModel* m, mjtNum* qpos);
 
-// map from body local to global Cartesian coordinates
+/**
+ * @brief 将刚体坐标系下的位姿转换到世界笛卡尔坐标下
+ * 
+ * map from body local to global Cartesian coordinates
+ * 
+ * @param [in|out] d 数据对象
+ * @param [out] xpos 转换后的位置向量
+ * @param [out] xmat 转换后的旋转矩阵
+ * @param [in] pos 刚体坐标系下的位置向量
+ * @param [in] quat 刚体坐标系下的四元数
+ * @param [in] body 刚体索引
+ * @param [in] sameframe 是否与刚体坐标系一致
+ */
 MJAPI void mj_local2Global(mjData* d, mjtNum xpos[3], mjtNum xmat[9],
                            const mjtNum pos[3], const mjtNum quat[4],
                            int body, mjtByte sameframe);

@@ -195,9 +195,9 @@ struct mjData_ {
   int     ne;                // number of equality constraints
   int     nf;                // number of friction constraints
   int     nl;                // number of limit constraints
-  int     nefc;              // number of constraints
+  int     nefc;              // 约束数量       number of constraints
   int     nnzJ;              // number of non-zeros in constraint Jacobian
-  int     ncon;              // number of detected contacts
+  int     ncon;              // 检出的碰撞对数量 number of detected contacts
   int     nisland;           // number of detected constraint islands
 
   // global properties
@@ -246,11 +246,11 @@ struct mjData_ {
   //-------------------- POSITION dependent
 
   // computed by mj_fwdPosition/mj_kinematics
-  mjtNum* xpos;              // Cartesian position of body frame                 (nbody x 3)
-  mjtNum* xquat;             // Cartesian orientation of body frame              (nbody x 4)
-  mjtNum* xmat;              // Cartesian orientation of body frame              (nbody x 9)
-  mjtNum* xipos;             // Cartesian position of body com                   (nbody x 3)
-  mjtNum* ximat;             // Cartesian orientation of body inertia            (nbody x 9)
+  mjtNum* xpos;              // Cartesian 刚体坐标系位置                         (nbody x 3)
+  mjtNum* xquat;             // Cartesian 刚体坐标系四元数                       (nbody x 4)
+  mjtNum* xmat;              // Cartesian 刚体坐标系姿态矩阵 3x3                 (nbody x 9)
+  mjtNum* xipos;             // Cartesian 刚体质心位置                           (nbody x 3)
+  mjtNum* ximat;             // Cartesian 刚体惯性姿态矩阵 3x3                   (nbody x 9)
   mjtNum* xanchor;           // Cartesian position of joint anchor               (njnt x 3)
   mjtNum* xaxis;             // Cartesian joint axis                             (njnt x 3)
   mjtNum* geom_xpos;         // Cartesian geom position                          (ngeom x 3)
@@ -263,9 +263,9 @@ struct mjData_ {
   mjtNum* light_xdir;        // Cartesian light direction                        (nlight x 3)
 
   // computed by mj_fwdPosition/mj_comPos
-  mjtNum* subtree_com;       // center of mass of each subtree                   (nbody x 3)
+  mjtNum* subtree_com;       // 各运动子树的质心坐标                             (nbody x 3)
   mjtNum* cdof;              // com-based motion axis of each dof (rot:lin)      (nv x 6)
-  mjtNum* cinert;            // com-based body inertia and mass                  (nbody x 10)
+  mjtNum* cinert;            // 关于质心的惯性张量和质量                         (nbody x 10)
 
   // computed by mj_fwdPosition/mj_flex
   mjtNum* flexvert_xpos;     // Cartesian flex vertex positions                  (nflexvert x 3)

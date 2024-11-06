@@ -26,7 +26,12 @@ extern "C" {
 // collision function pointers and max contact pairs
 MJAPI extern mjfCollision mjCOLLISIONFUNC[mjNGEOMTYPES][mjNGEOMTYPES];
 
-// collision detection entry point
+/**
+ * @brief 碰撞检测的入口函数
+ * 
+ * @param [in] m 模型对象
+ * @param [in|out] d 模型数据
+ */
 MJAPI void mj_collision(const mjModel* m, mjData* d);
 
 // applies Separating Axis Theorem for rotated AABBs
@@ -46,7 +51,20 @@ void mj_collideGeomPair(const mjModel* m, mjData* d, int g1, int g2, int merged,
 void mj_collideTree(const mjModel* m, mjData* d, int bf1, int bf2,
                     int merged, int startadr, int pairadr);
 
-// broad phase collision detection; return list of bodyflex pairs
+/**
+ * @brief Broad Phase 碰撞检测
+ * 
+ * broad phase collision detection; return list of bodyflex pairs
+ * 1. AAMM based Sweep And Prune
+ * 2. 同体检测 filter 3
+ * 3. 兼容性检测 filter 4
+ * 
+ * @param [in] m 模型对象
+ * @param [in|out] d 模型数据
+ * @param [out] bfpair 碰撞列表
+ * @param [in] maxpair 碰撞列表的最大长度
+ * @return 实际检出的碰撞数量
+ */
 int mj_broadphase(const mjModel* m, mjData* d, int* bfpair, int maxpair);
 
 // test two geoms for collision, apply filters, add to contact list

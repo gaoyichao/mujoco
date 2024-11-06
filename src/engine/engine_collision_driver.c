@@ -164,7 +164,18 @@ static int mj_filterSphere(const mjModel* m, mjData* d, int g1, int g2, mjtNum m
 
 
 
-// filter body pair: 1- discard, 0- proceed
+/**
+ * @brief 同体检测, 如果开启 filterparent 那么刚体对就不能互为父子关系
+ * 
+ * Filter 3: The two geoms cannot belong to the same body.
+ * 
+ * @param [in] weldbody1 刚体1
+ * @param [in] weldparent1 刚体1 的父节点
+ * @param [in] weldbody2 刚体2
+ * @param [in] weldparent2 刚体2 的父节点
+ * @param [in] dsbl_filterparent 是否关闭父节点 (m->opt.disableflags & (mjDSBL_FILTERPARENT))
+ * @return: 1-不通过， 0-通过
+ */
 static int filterBodyPair(int weldbody1, int weldparent1, int weldbody2,
                           int weldparent2, int dsbl_filterparent) {
   // same weldbody check
@@ -183,8 +194,19 @@ static int filterBodyPair(int weldbody1, int weldparent1, int weldbody2,
 }
 
 
-
-// return 1 if bodyflex can collide, 0 otherwise
+/**
+ * @brief 检查一个刚体或者柔体是否参与碰撞检查
+ * 
+ * Filter 4: The two geoms must be “compatible” in the following sense.
+ * (contype1 & conaffinity2) || (contype2 & conaffinity1) 必须为 1
+ * 
+ * 如果一个刚体/柔体的 contype 和 conaffinity 都为 0，那么上述条件一定不成立
+ * 所以该刚体/柔体是不可能发生碰撞的
+ * 
+ * @param [in] m 模型对象
+ * @param [in] bf 刚体或柔体索引
+ * @return 1-是, 0-否
+ */
 static int canCollide(const mjModel* m, int bf) {
   if (bf < m->nbody) {
     return (m->body_contype[bf] || m->body_conaffinity[bf]);
@@ -258,9 +280,6 @@ quicksortfunc(contactcompare, context, el1, el2) {
   return 0;
 }
 
-
-
-// main collision function
 void mj_collision(const mjModel* m, mjData* d) {
   TM_START1;
 
@@ -289,6 +308,7 @@ void mj_collision(const mjModel* m, mjData* d) {
   TM_START;
   int nmaxpairs = (nbodyflex*(nbodyflex - 1))/2;
   int* broadphasepair = mj_stackAllocInt(d, nmaxpairs);
+  // filter 3, filter 4, AAMM based Sweep And Prune
   int nbfpair = mj_broadphase(m, d, broadphasepair, nmaxpairs);
   unsigned int last_signature = -1;
   TM_END(mjTIMER_COL_BROAD);
@@ -326,6 +346,7 @@ void mj_collision(const mjModel* m, mjData* d) {
     }
 
     // apply bitmask filtering at the bodyflex level
+    // Filter 4: 兼容性检查
     if (!canCollide2(m, bf1, bf2)) {
       continue;
     }
@@ -934,9 +955,18 @@ static void makeAAMM(const mjModel* m, mjData* d, mjtNum* aamm, int bf, const mj
   }
 }
 
-
-
-// add bodyflex pair in buffer; do not filter if m is NULL
+/**
+ * @brief 添加一个碰撞对
+ * 
+ * add bodyflex pair in buffer; do not filter if m is NULL
+ * 
+ * @param [in] m 模型对象
+ * @param [in] bf1 刚体/柔体 1 索引
+ * @param [in] bf2 刚体/柔体 2 索引
+ * @param [in|out] npair 碰撞对数量, 如果成功插入将自增 1
+ * @param [out] pair 碰撞对签名, (bf_little <<16) + bf_large
+ * @param [in] maxpair 最大的碰撞对数量
+ */
 static void add_pair(const mjModel* m, int bf1, int bf2,
                      int* npair, int* pair, int maxpair) {
   // add pair if there is room in buffer
@@ -974,7 +1004,7 @@ static void add_pair(const mjModel* m, int bf1, int bf2,
         conaffinity2 = m->flex_conaffinity[bf2-nbody];
       }
 
-      // compatibility check
+      // Filter 4:兼容性检查
       if (!(contype1 & conaffinity2) && !(contype2 & conaffinity1)) {
         return;
       }
@@ -1146,9 +1176,6 @@ quicksortfunc(uintcompare, context, el1, el2) {
   }
 }
 
-
-
-// broadphase collision detector
 int mj_broadphase(const mjModel* m, mjData* d, int* bfpair, int maxpair) {
   int npair = 0, nbody = m->nbody, ngeom = m->ngeom;
   int nvert = m->nflexvert, nflex = m->nflex, nbodyflex = m->nbody + m->nflex;
@@ -1157,10 +1184,8 @@ int mj_broadphase(const mjModel* m, mjData* d, int* bfpair, int maxpair) {
 
   // init with pairs involving always-colliding bodies
   for (int b1=0; b1 < nbody; b1++) {
-    // cannot colide
-    if (!canCollide(m, b1)) {
+    if (!canCollide(m, b1))
       continue;
-    }
 
     // b1 is world body with geoms, or world-welded body with plane
     if ((b1 == 0 && m->body_geomnum[b1] > 0) ||
@@ -1168,9 +1193,8 @@ int mj_broadphase(const mjModel* m, mjData* d, int* bfpair, int maxpair) {
       // add b1:body pairs that are not welded together
       for (int b2=0; b2 < nbody; b2++) {
         // cannot colide
-        if (!canCollide(m, b2)) {
+        if (!canCollide(m, b2))
           continue;
-        }
 
         // welded together
         int weld2 = m->body_weldid[b2];
@@ -1470,6 +1494,7 @@ void mj_collideGeoms(const mjModel* m, mjData* d, int g1, int g2) {
   type2 = m->geom_type[g2];
 
   // return if no collision function
+  // Filter 1: 必须能够找到一个碰撞函数
   if (!mjCOLLISIONFUNC[type1][type2]) {
     return;
   }
@@ -1484,6 +1509,7 @@ void mj_collideGeoms(const mjModel* m, mjData* d, int g1, int g2) {
     }
 
     // otherwise built-in filter
+    // Filter 4: 兼容性检查
     else if (filterBitmask(m->geom_contype[g1], m->geom_conaffinity[g1],
                            m->geom_contype[g2], m->geom_conaffinity[g2])) {
       return;
@@ -1498,6 +1524,7 @@ void mj_collideGeoms(const mjModel* m, mjData* d, int g1, int g2) {
   }
 
   // bounding sphere filter
+  // Filter 2: 边界球过滤器
   if (mj_filterSphere(m, d, g1, g2, margin)) {
     return;
   }

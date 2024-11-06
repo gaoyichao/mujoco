@@ -128,7 +128,10 @@ MJAPI int* mj_stackAllocInt(mjData* d, int size);
 // de-allocate data
 MJAPI void mj_deleteData(mjData* d);
 
-// clear arena pointers in mjData
+/**
+ * @brief 清空 mjData 中的 arena 指针
+ * clear arena pointers in mjData
+ */
 static inline void mj_clearEfc(mjData* d) {
 #define X(type, name, nr, nc) d->name = NULL;
   MJDATA_ARENA_POINTERS

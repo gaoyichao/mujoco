@@ -112,7 +112,7 @@ typedef int (*mjfItemEnable)(int category, void* data);
 
 //---------------------------------- mjuiState -----------------------------------------------------
 
-struct mjuiState_ {               // mouse and keyboard state
+struct mjuiState_ {               // 鼠标和键盘的状态
   // constants set by user
   int nrect;                      // number of rectangles used
   mjrRect rect[mjMAXUIRECT];      // rectangles (index 0: entire window)

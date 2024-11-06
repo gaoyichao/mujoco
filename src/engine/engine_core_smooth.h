@@ -24,10 +24,25 @@ extern "C" {
 #endif
 //-------------------------- position --------------------------------------------------------------
 
-// forward kinematics
+/**
+ * @brief 正运动学, forward kinematics
+ * 
+ * @param [in] m 模型对象
+ * @param [in|out] d 模型数据
+ */
 MJAPI void mj_kinematics(const mjModel* m, mjData* d);
 
-// map inertias and motion dofs to global frame centered at CoM
+/**
+ * @brief 质心运动学
+ * 
+ * map inertias and motion dofs to global frame centered at CoM
+ * 1. 更新各个运动子树的质心
+ * 2. 更新各个刚体在世界坐标系下关于运动子树质心的惯性张量
+ * 3. 更新在世界坐标系下，各个关节相对于质心的平移和旋转运动
+ * 
+ * @param [in] m 模型对象
+ * @param [in|out] d 模型数据
+ */
 MJAPI void mj_comPos(const mjModel* m, mjData* d);
 
 // compute camera and light positions and orientations
@@ -45,14 +60,40 @@ MJAPI void mj_transmission(const mjModel* m, mjData* d);
 
 //-------------------------- inertia ---------------------------------------------------------------
 
-// composite rigid body inertia algorithm
+/**
+ * @brief 复合刚体算法 CRB
+ * 
+ * composite rigid body inertia algorithm
+ * 
+ * @param [in] m 模型对象
+ * @param [in|out] d 模型数据
+ */
 MJAPI void mj_crb(const mjModel* m, mjData* d);
 
-// sparse L'*D*L factorizaton of inertia-like matrix M, assumed spd
-MJAPI void mj_factorI(const mjModel* m, mjData* d, const mjtNum* M, mjtNum* qLD, mjtNum* qLDiagInv,
+/**
+ * @brief 稀疏惯性矩阵的 LTDL 分解
+ * 
+ * sparse L'*D*L factorizaton of the inertia matrix M, assumed spd
+ * 
+ * @param [in] m 模型对象
+ * @param [in|out] d 模型数据
+ * @param [in] M 稀疏惯性矩阵
+ * @param [out] qLD 分解后的下三角和对角矩阵
+ * @param [out] qLDiagInv 对角矩阵各元素的倒数
+ * @param [out] qLDiagSqrtInv 对角矩阵各元素的倒数的开方
+ */
+MJAPI void mj_factorI(const mjModel* m, mjData* d,
+                      const mjtNum* M, mjtNum* qLD, mjtNum* qLDiagInv,
                       mjtNum* qLDiagSqrtInv);
 
-// sparse L'*D*L factorizaton of the inertia matrix M, assumed spd
+/**
+ * @brief 稀疏惯性矩阵的 LTDL 分解
+ * 
+ * sparse L'*D*L factorizaton of the inertia matrix M, assumed spd
+ * 
+ * @param [in] m 模型对象
+ * @param [in|out] d 模型数据
+ */
 MJAPI void mj_factorM(const mjModel* m, mjData* d);
 
 // sparse backsubstitution:  x = inv(L'*D*L)*y

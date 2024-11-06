@@ -23,14 +23,18 @@ extern "C" {
 #endif
 //------------------------------ quaternion operations ---------------------------------------------
 
-// rotate vector by quaternion
+/**
+ * @brief 旋转向量 res = quat * vec
+ */
 MJAPI void mju_rotVecQuat(mjtNum res[3], const mjtNum vec[3], const mjtNum quat[4]);
 
 // compute conjugate quaternion, corresponding to opposite rotation
 MJAPI void mju_negQuat(mjtNum res[4], const mjtNum quat[4]);
 
-// multiply quaternions
-MJAPI void mju_mulQuat(mjtNum res[4], const mjtNum quat1[4], const mjtNum quat2[4]);
+/**
+ * @brief 四元数乘法 res = qa * qb
+ */
+MJAPI void mju_mulQuat(mjtNum res[4], const mjtNum qa[4], const mjtNum qb[4]);
 
 // multiply quaternion and axis
 MJAPI void mju_mulQuatAxis(mjtNum res[4], const mjtNum quat[4], const mjtNum axis[3]);
