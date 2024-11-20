@@ -1049,11 +1049,19 @@ quicksortfunc(SAPcompare, context, el1, el2) {
   }
 }
 
-
-
-// given list of axis-aligned bounding boxes in AAMM (xmin[3], xmax[3]) format,
-// return list of pairs (i, j) in format (i<<16 + j) that can collide,
-// using sweep-and-prune along specified axis (0-2).
+/**
+ * @brief 扫描剪枝算法 Sweep-And-Prune
+ * 
+ * https://gaoyichao.com/Xiaotu/?book=MuJoCo仿真引擎&title=扫描剪枝算法
+ * 
+ * @param [in|out] d 仿真数据对象
+ * @param [in] aamm 轴对齐盒子列表 (xmin[3], xmax[3])
+ * @param [in] n 几何体数量
+ * @param [in] axis 投影轴
+ * @param [out] pair 可能碰撞的几何体对候选列表, 碰撞对(i, j)的编码形式: (i<<16 + j)
+ * @param [in] maxpair 候选列表缓存大小
+ * @return 可能碰撞的几何体数量
+ */
 static int mj_SAP(mjData* d, const mjtNum* aamm, int n, int axis, int* pair, int maxpair) {
   // check inputs
   if (n >= 0x10000 || axis < 0 || axis > 2 || maxpair < 1) {
